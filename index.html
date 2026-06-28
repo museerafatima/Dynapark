@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DynaPark - Smart Dynamic Parking</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* ==================== CSS STYLING ==================== */
+        :root { --primary: #D27D2D; --dark: #222; --light: #fff; --gray: #f9f9f9; --error: #d93025; --blue-box: #1e2a4a; --beige-box: #f5f0e6; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+        body { background-color: var(--light); color: var(--dark); height: 100vh; overflow: hidden; position: relative; }
+
+        /* BACKGROUNDS */
+        .map-bg-default {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Pakistan_location_map.svg/1707px-Pakistan_location_map.svg.png');
+            background-size: cover; background-position: center; opacity: 0.1; z-index: -1; filter: sepia(100%) hue-rotate(-30deg);
+        }
+
+        #page-booking {
+            background-image: url('static/map_bg.png'); 
+            background-size: cover; background-position: center;
+            width: 100%; height: 100vh; display: none; 
+            justify-content: center; align-items: center;
+        }
+
+        /* NAV */
+        nav { display: flex; justify-content: space-between; align-items: center; padding: 20px 60px; position: absolute; width: 100%; top: 0; z-index: 10; background: rgba(255,255,255,0.95); backdrop-filter: blur(5px); border-bottom: 1px solid #eee; }
+        .logo { font-size: 1.8rem; font-weight: 800; color: var(--dark); }
+        .logo span { color: var(--primary); }
+        .nav-links { display: flex; gap: 40px; align-items: center; }
+        .nav-links a { text-decoration: none; color: var(--primary); font-weight: 600; cursor: pointer; transition: 0.3s; }
+        .nav-links a:hover { color: #b56015; }
+        
+        .dashboard-btn { 
+            padding: 10px 20px; background: var(--primary); color: white !important; border-radius: 5px; 
+            font-size: 0.9rem; border: none; box-shadow: 0 4px 10px rgba(210, 125, 45, 0.3);
+        }
+        .dashboard-btn:hover { background: #b56015; transform: translateY(-2px); }
+
+        /* === CONTACT POPUP (NEW) === */
+        #contact-popup {
+            display: none;
+            position: absolute;
+            top: 70px; /* Positioned below nav */
+            right: 60px; /* Aligned with right padding */
+            width: 320px;
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+            border-top: 5px solid var(--primary);
+            z-index: 200;
+            text-align: left;
+            animation: fadeIn 0.2s ease-out;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .contact-row { display: flex; align-items: center; margin-bottom: 15px; }
+        .contact-row i { color: var(--primary); font-size: 1.2rem; width: 30px; }
+        .contact-text { font-size: 0.9rem; color: #555; }
+        .contact-text strong { display: block; color: var(--dark); font-size: 0.95rem; }
+
+        /* HERO PAGE */
+        #page-home { display: flex; height: 100vh; padding: 0 60px; align-items: center; }
+        .left-content { width: 50%; }
+        .hero-title { font-size: 4.5rem; line-height: 1.1; font-weight: 800; color: var(--primary); margin-bottom: 20px; }
+        .big-btn { background-color: var(--primary); color: white; padding: 15px 40px; font-size: 1.2rem; font-weight: 600; border: none; cursor: pointer; border-radius: 8px; transition: transform 0.2s, box-shadow 0.2s; }
+        .big-btn:hover { transform: translateY(-3px); background-color: #b56015; box-shadow: 0 10px 20px rgba(210, 125, 45, 0.3); }
+
+        /* BOOKING FORM PAGE */
+        .booking-card { background: rgba(255, 255, 255, 0.98); padding: 40px; border-radius: 15px; width: 400px; border-top: 6px solid var(--primary); box-shadow: 0 20px 50px rgba(0,0,0,0.15); }
+        .booking-card h2 { color: var(--primary); margin-bottom: 20px; text-align: center; }
+        label { display: block; color: var(--primary); font-weight: 600; margin-bottom: 5px; margin-top: 15px; }
+        .brown-input { width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; background: white; outline: none; transition: 0.3s; }
+        .brown-input:focus { border-color: var(--primary); }
+        .quote-btn { width: 100%; margin-top: 30px; }
+
+        /* SPLIT LAYOUT */
+        .split-page { display: none; height: 100vh; width: 100%; background: #fff; padding-top: 80px; }
+        .sidebar { width: 25%; height: 100%; background: #fff; border-right: 1px solid #eee; padding: 30px; display: flex; flex-direction: column; overflow-y: auto; }
+        .main-content { width: 75%; height: 100%; padding: 30px 60px; overflow-y: auto; background: #fff; }
+
+        .booking-dates-box { border: 1px solid #eee; border-radius: 8px; padding: 15px; background: #fff; }
+        .booking-label { font-size: 0.8rem; color: #888; margin-bottom: 3px; }
+        .booking-value { font-size: 0.95rem; font-weight: 700; color: var(--dark); }
+        .connector-line { width: 2px; height: 25px; background: var(--primary); margin-left: 20px; margin-top: -5px; margin-bottom: -5px; z-index: 1; }
+        .period-header { margin-top: 25px; font-size: 1rem; color: var(--primary); font-weight: 800; }
+        .period-value { font-size: 0.9rem; color: #555; }
+        .order-summary-header { font-size: 1.1rem; color: var(--primary); font-weight: 800; border-top: 2px solid #eee; padding-top: 20px; margin-top: auto; }
+        .total-display { font-size: 2rem; color: var(--primary); font-weight: 800; margin-top: 5px; }
+
+        /* PAGE 5 SPECIAL LAYOUT */
+        .split-page-reverse { display: none; height: 100vh; width: 100%; background: #fff; padding-top: 80px; }
+        .sidebar-right { width: 30%; height: 100%; background: #fdfdfd; border-left: 1px solid #ddd; padding: 30px; display: flex; flex-direction: column; overflow-y: auto; }
+        .content-left { width: 70%; height: 100%; padding: 30px 60px; overflow-y: auto; background: #fff; }
+
+        /* VEHICLE ITEMS */
+        .vehicle-item { display: flex; align-items: center; background: #fff; border: 1px solid #e0e0e0; margin-bottom: 20px; padding: 20px; border-radius: 8px; transition: 0.3s; cursor: default; }
+        .vehicle-item:hover { border-color: var(--primary); box-shadow: 0 10px 25px rgba(210, 125, 45, 0.15); transform: translateY(-2px); }
+        .v-image { width: 80px; font-size: 2.5rem; color: #444; text-align: center; }
+        .v-details { flex: 1; padding: 0 20px; }
+        .v-title { font-size: 1.1rem; font-weight: 700; color: var(--dark); }
+        .v-specs { font-size: 0.85rem; color: #666; margin-top: 5px; display: flex; gap: 15px; }
+        .v-specs i { color: var(--primary); }
+        .v-price { font-size: 1.3rem; font-weight: 800; color: var(--primary); }
+        .select-btn { padding: 8px 25px; background: var(--primary); color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; margin-left: 15px; transition: 0.2s; }
+        .select-btn:hover { background: #b56015; transform: scale(1.05); }
+
+        /* FORM STYLING */
+        .big-heading { font-size: 1.8rem; color: var(--primary); font-weight: 800; margin-bottom: 20px; }
+        .sub-heading { font-size: 1rem; color: var(--dark); font-weight: 600; margin-bottom: 10px; }
+        .space-vertical-3 { margin-top: 3rem; }
+        .form-row { display: flex; gap: 3rem; margin-bottom: 20px; }
+        .form-col { flex: 1; display: flex; flex-direction: column; }
+        .form-label { font-size: 0.8rem; color: #666; font-weight: 700; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .form-input { padding: 12px; border: 1px solid #ccc; border-radius: 5px; background: #fdfdfd; outline: none; transition: 0.2s; }
+        .form-input:focus { border-color: var(--primary); background: #fff; box-shadow: 0 0 0 3px rgba(210, 125, 45, 0.1); }
+        .form-input.error { border-color: var(--error); background: #fff0f0; }
+        .form-textarea { padding: 12px; border: 1px solid #ccc; border-radius: 5px; width: 100%; resize: vertical; }
+
+        /* PAYMENT METHODS */
+        .payment-container { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+        .payment-label { display: flex; align-items: center; padding: 15px; border: 1px solid #ddd; border-radius: 5px; cursor: pointer; transition: 0.2s; }
+        .payment-label:hover { border-color: var(--primary); background: #fffcf8; }
+        .payment-label input { accent-color: var(--primary); margin-right: 15px; transform: scale(1.2); }
+        .payment-text { font-weight: 600; color: var(--dark); font-size: 1rem; }
+
+        /* REVIEW PAGE GRID */
+        .review-data-row { display: flex; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        .review-key { width: 150px; font-weight: 600; color: #666; font-size: 0.9rem; }
+        .review-val { flex: 1; font-weight: 700; color: var(--dark); font-size: 1rem; }
+
+        /* SUMMARY BOX */
+        .date-card-entry { background-color: var(--blue-box); color: white; padding: 15px; border-radius: 4px; position: relative; }
+        .date-card-exit { background-color: var(--beige-box); color: #333; padding: 15px; border-radius: 4px; margin-top: 20px; border: 1px solid #e0d8c8; }
+        .date-card-label { font-size: 0.8rem; opacity: 0.8; margin-bottom: 5px; }
+        .date-card-value { font-size: 1rem; font-weight: 700; }
+        .date-connector-vertical { position: absolute; left: 30px; top: 100%; height: 20px; border-left: 2px dashed #ccc; z-index: 1; }
+        .price-summary-row { display: flex; justify-content: space-between; margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee; font-size: 0.95rem; color: #555; }
+        .price-total-row { display: flex; justify-content: space-between; margin-top: 15px; font-size: 1.3rem; font-weight: 800; color: #333; }
+
+        /* FOOTER */
+        .footer-nav { display: flex; justify-content: space-between; margin-top: 50px; padding-bottom: 50px; }
+        .nav-btn { background: var(--primary); color: white; padding: 15px 30px; border: none; border-radius: 5px; font-weight: 700; font-size: 1rem; cursor: pointer; transition: 0.2s; }
+        .nav-btn:hover { background: #b56015; transform: translateY(-2px); }
+        .nav-btn.secondary { background: #eee; color: #333; }
+        .nav-btn.secondary:hover { background: #ddd; transform: translateY(-2px); }
+
+        /* PAGE 6: SUCCESS */
+        #page-success { display: none; height: 100vh; flex-direction: column; justify-content: center; align-items: center; text-align: center; background: #fdfdfd; }
+        .success-circle { width: 120px; height: 120px; background: #f8e8d8; border-radius: 50%; display: flex; justify-content: center; align-items: center; margin-bottom: 30px; position: relative; }
+        .success-circle::after { content: ''; position: absolute; top: -10px; right: -10px; width: 30px; height: 30px; background: radial-gradient(circle, var(--primary) 2px, transparent 2.5px); background-size: 10px 10px; opacity: 0.5; }
+        .success-icon { font-size: 4rem; color: var(--primary); }
+        .success-title { font-size: 2.5rem; color: #333; font-weight: 800; margin-bottom: 40px; }
+
+        /* === CUSTOM MODAL & LOADING === */
+        #loading-overlay {
+            display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(255,255,255,0.9); z-index: 100;
+            flex-direction: column; justify-content: center; align-items: center; text-align: center;
+        }
+        .spinner { width: 50px; height: 50px; border: 5px solid #eee; border-top: 5px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        #result-modal {
+            display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5); z-index: 101;
+            justify-content: center; align-items: center;
+        }
+        .modal-box {
+            background: white; width: 400px; padding: 40px; border-radius: 15px; text-align: center; position: relative; border-top: 8px solid var(--primary);
+            box-shadow: 0 25px 50px rgba(0,0,0,0.2); animation: slideUp 0.3s ease-out;
+        }
+        @keyframes slideUp { from { transform: translateY(50px); opacity:0; } to { transform: translateY(0); opacity:1; } }
+        .modal-icon { font-size: 3rem; color: var(--primary); margin-bottom: 15px; }
+        .modal-title { font-size: 1.5rem; font-weight: 800; color: #333; margin-bottom: 20px; }
+        .modal-detail { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; font-size: 0.95rem; }
+        .modal-btn { width: 100%; background: var(--primary); color: white; padding: 12px; border: none; border-radius: 5px; font-weight: 700; margin-top: 25px; cursor: pointer; }
+        .modal-btn:hover { background: #b56015; }
+
+        /* === LIVE STATUS DASHBOARD === */
+        #dashboard-modal {
+            display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.8); z-index: 102;
+            justify-content: center; align-items: center;
+        }
+        .dash-box {
+            background: white; width: 600px; padding: 30px; border-radius: 10px; text-align: center;
+        }
+        .dash-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 20px;
+        }
+        .slot-box {
+            padding: 15px; border-radius: 5px; color: white; font-weight: 700;
+        }
+        .slot-free { background-color: #2ecc71; }
+        .slot-occupied { background-color: #e74c3c; }
+
+    </style>
+</head>
+<body>
+
+    <nav>
+        <div class="logo">Dyna<span>Park</span></div>
+        <div class="nav-links">
+            <a onclick="goHome()">Home</a>
+            <a onclick="openDashboard()" class="dashboard-btn">Live Status</a>
+            <a onclick="showContact()">Contact</a>
+        </div>
+    </nav>
+
+    <div id="contact-popup">
+        <h4 style="color:var(--primary); margin-bottom:15px; font-size:1.1rem;"><i class="fa-solid fa-headset"></i> Customer Support</h4>
+        <div class="contact-row"><i class="fa-solid fa-phone"></i><div class="contact-text"><strong>Phone</strong>+92 321 1234567</div></div>
+        <div class="contact-row"><i class="fa-solid fa-envelope"></i><div class="contact-text"><strong>Email</strong>info@dynapark.pk</div></div>
+        <div class="contact-row"><i class="fa-solid fa-location-dot"></i><div class="contact-text"><strong>Location</strong>Blue Area, Islamabad</div></div>
+    </div>
+
+    <div id="loading-overlay">
+        <div class="spinner"></div>
+        <h3 style="color:var(--primary);">Analyzing Parking Graph...</h3>
+        <p style="color:#666;">Running Dijkstra's Algorithm for optimal path</p>
+    </div>
+
+    <div id="result-modal">
+        <div class="modal-box">
+            <i class="fa-solid fa-wand-magic-sparkles modal-icon"></i>
+            <div class="modal-title">Optimal Slot Found!</div>
+            <div class="modal-detail"><span>Allocated Slot</span><strong id="m-slot">...</strong></div>
+            <div class="modal-detail"><span>Distance</span><strong id="m-dist">...</strong></div>
+            <div class="modal-detail"><span>Desirability Score</span><strong id="m-score" style="color:var(--primary);">...</strong></div>
+            <button class="modal-btn" onclick="proceedFromModal()">Proceed to Booking</button>
+        </div>
+    </div>
+
+    <div id="dashboard-modal">
+        <div class="dash-box">
+            <h2>Live Parking Status</h2>
+            <p>Visualizing Backend Traffic Simulation</p>
+            <div class="dash-grid" id="dash-grid">
+                </div>
+            <button class="modal-btn" onclick="closeDashboard()">Close</button>
+        </div>
+    </div>
+
+    <div id="page-home">
+        <div class="left-content">
+            <h1 class="hero-title">Simplify your daily commute Dynamically.</h1>
+            <button class="big-btn" onclick="goToBooking()">Try DynaParking ↗</button>
+        </div>
+        <div class="map-bg-default"></div>
+    </div>
+
+    <div id="page-booking">
+        <div class="booking-card">
+            <h2>Get Your Quote</h2>
+            <label>Entry Date & Time</label> <input type="datetime-local" id="entry-date" class="brown-input">
+            <label>Exit Date & Time</label> <input type="datetime-local" id="exit-date" class="brown-input">
+            <label>Parking Type</label>
+            <select id="parking-type" class="brown-input">
+                <option value="Hourly">Hourly</option>
+                <option value="Daily">Daily</option>
+                <option value="Weekly">Weekly</option>
+            </select>
+            <button class="big-btn quote-btn" onclick="goToVehicleSelection()">Get my Quote</button>
+        </div>
+    </div>
+
+    <div id="page-selection" class="split-page">
+        <div class="sidebar">
+            <h3 style="color:var(--primary); margin-bottom:20px;">Booking Details</h3>
+            <div class="booking-dates-box"><div class="booking-label">Entry Date</div><div class="booking-value" id="disp-entry">...</div></div>
+            <div class="connector-line"></div>
+            <div class="booking-dates-box"><div class="booking-label">Exit Date</div><div class="booking-value" id="disp-exit">...</div></div>
+            <div class="period-header">Booking Period</div><div class="period-value" id="disp-period">...</div>
+        </div>
+        <div class="main-content">
+            <div class="big-heading" style="border-bottom: 2px solid #eee; padding-bottom:10px;">Select Parking Space</div>
+            
+            <div class="vehicle-item">
+                <div class="v-image"><i class="fa-solid fa-motorcycle"></i></div>
+                <div class="v-details"><div class="v-title">Two-Wheeled</div><div class="v-specs"><span><i class="fa-solid fa-ruler"></i> 1.2x2.8m</span></div></div>
+                <div class="v-price">Rs 100</div>
+                <button class="select-btn" onclick="selectVehicle('Motorcycle', 100)">SELECT</button>
+            </div>
+            <div class="vehicle-item">
+                <div class="v-image"><i class="fa-solid fa-car-side"></i></div>
+                <div class="v-details"><div class="v-title">Regular Car</div><div class="v-specs"><span><i class="fa-solid fa-ruler"></i> 2.5x5.0m</span></div></div>
+                <div class="v-price">Rs 300</div>
+                <button class="select-btn" onclick="selectVehicle('Car', 300)">SELECT</button>
+            </div>
+            <div class="vehicle-item">
+                <div class="v-image"><i class="fa-solid fa-shuttle-van"></i></div>
+                <div class="v-details"><div class="v-title">Van / Minibus</div><div class="v-specs"><span><i class="fa-solid fa-ruler"></i> 2.8x7.0m</span></div></div>
+                <div class="v-price">Rs 700</div>
+                <button class="select-btn" onclick="selectVehicle('Van', 700)">SELECT</button>
+            </div>
+             <div class="vehicle-item">
+                <div class="v-image"><i class="fa-solid fa-bus"></i></div>
+                <div class="v-details"><div class="v-title">Bus</div><div class="v-specs"><span><i class="fa-solid fa-ruler"></i> 3.0x12m</span></div></div>
+                <div class="v-price">Rs 1000</div>
+                <button class="select-btn" onclick="selectVehicle('Bus', 1000)">SELECT</button>
+            </div>
+
+            <div class="footer-nav">
+                <button class="nav-btn secondary" onclick="goBackToBooking()">← Select Dates</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="page-customer" class="split-page">
+        <div class="sidebar">
+            <h3 style="color:var(--primary); margin-bottom:20px;">Booking Details</h3>
+            <div class="booking-dates-box"><div class="booking-label">Entry Date</div><div class="booking-value" id="summ-entry">...</div></div>
+            <div class="connector-line"></div>
+            <div class="booking-dates-box"><div class="booking-label">Exit Date</div><div class="booking-value" id="summ-exit">...</div></div>
+            <div class="period-header">Booking Period</div><div class="period-value" id="summ-period">...</div>
+            <div class="order-summary-header">Order Summary</div>
+            <div style="font-size:0.9rem; margin-top:5px; color:#666;">Total</div>
+            <div class="total-display" id="summ-total">...</div>
+        </div>
+
+        <div class="main-content">
+            <div class="big-heading">Customer Details</div>
+            
+            <div class="form-row">
+                <div class="form-col"><div class="form-label">First Name</div><input type="text" id="fname" class="form-input" placeholder="Letters only"></div>
+                <div class="form-col"><div class="form-label">Last Name</div><input type="text" id="lname" class="form-input" placeholder="Letters only"></div>
+            </div>
+            <div class="form-row">
+                <div class="form-col"><div class="form-label">Email Address</div><input type="email" id="email" class="form-input" placeholder="example@mail.com"></div>
+                <div class="form-col"><div class="form-label">Phone Number</div><input type="text" id="phone" class="form-input" placeholder="Digits only"></div>
+            </div>
+
+            <div class="sub-heading">Instructions</div>
+            <textarea class="form-textarea" id="comments" rows="3"></textarea>
+
+            <div class="big-heading space-vertical-3">Billing Address</div>
+            <div class="form-row">
+                <div class="form-col"><div class="form-label">Vehicle Reg Number</div><input type="text" id="vehicle-reg" class="form-input"></div>
+                <div class="form-col"><div class="form-label">CNIC</div><input type="text" id="cnic" class="form-input" placeholder="Digits only"></div>
+            </div>
+            <div class="form-row">
+                <div class="form-col"><div class="form-label">City</div><input type="text" id="city" class="form-input" placeholder="Letters only"></div>
+                <div class="form-col"><div class="form-label">Residential Address</div><input type="text" id="address" class="form-input"></div>
+            </div>
+
+            <div class="big-heading space-vertical-3">Payment Method</div>
+            <div class="payment-container">
+                <label class="payment-label"><input type="radio" name="payment" value="Cash" checked><span class="payment-text">Cash</span></label>
+                <label class="payment-label"><input type="radio" name="payment" value="Bank Transfer"><span class="payment-text">Bank Transfer</span></label>
+                <label class="payment-label"><input type="radio" name="payment" value="CNIC Transfer"><span class="payment-text">CNIC Transfer</span></label>
+                <label class="payment-label"><input type="radio" name="payment" value="Raast Payment"><span class="payment-text">Raast Payment</span></label>
+            </div>
+
+            <div class="footer-nav">
+                <button class="nav-btn secondary" onclick="goBackToVehicles()">Parking Space</button>
+                <button class="nav-btn" onclick="goToReview()">Booking Summary <i class="fa-solid fa-arrow-right"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <div id="page-review" class="split-page-reverse">
+        
+        <div class="content-left">
+            <div class="big-heading">Confirm Details</div>
+            
+            <div class="sub-heading" style="color:var(--primary); margin-top:20px;">Customer Information</div>
+            <div class="review-data-row"><div class="review-key">Name</div><div class="review-val" id="r-name">...</div></div>
+            <div class="review-data-row"><div class="review-key">Email</div><div class="review-val" id="r-email">...</div></div>
+            <div class="review-data-row"><div class="review-key">Phone</div><div class="review-val" id="r-phone">...</div></div>
+            <div class="review-data-row"><div class="review-key">CNIC</div><div class="review-val" id="r-cnic">...</div></div>
+
+            <div class="sub-heading" style="color:var(--primary); margin-top:30px;">Vehicle & Billing</div>
+            <div class="review-data-row"><div class="review-key">Vehicle Reg</div><div class="review-val" id="r-veh">...</div></div>
+            <div class="review-data-row"><div class="review-key">City</div><div class="review-val" id="r-city">...</div></div>
+            <div class="review-data-row"><div class="review-key">Address</div><div class="review-val" id="r-addr">...</div></div>
+
+            <div class="sub-heading" style="color:var(--primary); margin-top:30px;">Payment</div>
+            <div class="review-data-row"><div class="review-key">Method</div><div class="review-val" id="r-pay">...</div></div>
+
+            <div class="footer-nav">
+                <button class="nav-btn secondary" onclick="goBackToForm()">< Customer Details</button>
+                <button class="nav-btn" onclick="finishBooking()">Book Now <i class="fa-solid fa-check"></i></button>
+            </div>
+        </div>
+
+        <div class="sidebar-right">
+            <h3 style="color:#333; margin-bottom:20px;">Order Summary</h3>
+            <div class="date-card-entry">
+                <div class="date-card-label">Entry date</div><div class="date-card-value" id="rev-entry">...</div>
+                <div class="date-connector-vertical"></div>
+            </div>
+            <div class="date-card-exit">
+                <div class="date-card-label">Exit date</div><div class="date-card-value" id="rev-exit">...</div>
+            </div>
+            <div style="margin-top:40px;">
+                <div class="price-summary-row"><span>Space <span id="r-days">(...)</span></span><span id="r-subtotal">...</span></div>
+                <div class="price-total-row"><span>Total</span><span id="r-total">...</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="page-success">
+        <div class="success-circle"><i class="fa-solid fa-check success-icon"></i></div>
+        <h1 class="success-title">Thank you for your order</h1>
+        <button class="nav-btn" onclick="goHome()">Back To Home</button>
+    </div>
+
+    <script>
+        let selectedPricePerUnit = 0; let calculatedDurationUnits = 0; let pricingMode = "Hourly";
+
+        function goHome() {
+            document.querySelectorAll('.split-page, .split-page-reverse, #page-booking, #page-success').forEach(el => el.style.display = 'none');
+            document.getElementById('page-home').style.display = 'flex';
+            document.querySelectorAll('.form-input').forEach(i => i.value = '');
+        }
+        function goToBooking() { document.getElementById('page-home').style.display = 'none'; document.getElementById('page-booking').style.display = 'flex'; }
+        function goBackToBooking() { document.getElementById('page-selection').style.display = 'none'; document.getElementById('page-booking').style.display = 'flex'; }
+        function goBackToVehicles() { document.getElementById('page-customer').style.display = 'none'; document.getElementById('page-selection').style.display = 'flex'; }
+        function goBackToForm() { document.getElementById('page-review').style.display = 'none'; document.getElementById('page-customer').style.display = 'flex'; }
+
+        // --- NEW CONTACT TOGGLE ---
+        function showContact() {
+            const p = document.getElementById('contact-popup');
+            p.style.display = (p.style.display === 'block') ? 'none' : 'block';
+        }
+
+        function goToVehicleSelection() {
+            const entry = document.getElementById('entry-date').value; const exit = document.getElementById('exit-date').value; const type = document.getElementById('parking-type').value;
+            if(!entry || !exit) { alert("Please select dates"); return; }
+            
+            const opt = { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+            const entryStr = new Date(entry).toLocaleString('en-US', opt);
+            const exitStr = new Date(exit).toLocaleString('en-US', opt);
+            ['disp', 'summ', 'rev'].forEach(p => { 
+                if(document.getElementById(p+'-entry')) document.getElementById(p+'-entry').innerText = entryStr;
+                if(document.getElementById(p+'-exit')) document.getElementById(p+'-exit').innerText = exitStr;
+            });
+
+            const diff = new Date(exit) - new Date(entry);
+            if(diff < 0) { alert("Invalid dates"); return; }
+            const hrs = Math.ceil(diff / 3600000);
+            calculatedDurationUnits = (type === "Hourly") ? hrs : Math.ceil(hrs / 24);
+            const pStr = (type === "Hourly") ? hrs + " Hours" : calculatedDurationUnits + " Days";
+            pricingMode = (type === "Hourly") ? "hours" : "days";
+            
+            document.getElementById('disp-period').innerText = pStr;
+            document.getElementById('summ-period').innerText = pStr;
+
+            document.getElementById('page-booking').style.display = 'none';
+            document.getElementById('page-selection').style.display = 'flex';
+        }
+
+        // --- NEW SMART SELECTION WITH MODAL ---
+        function selectVehicle(name, price) {
+            let total = price * calculatedDurationUnits;
+            const tStr = "Rs " + total.toLocaleString();
+            document.getElementById('summ-total').innerText = tStr;
+            document.getElementById('r-total').innerText = tStr;
+            document.getElementById('r-subtotal').innerText = tStr;
+            document.getElementById('r-days').innerText = "(" + calculatedDurationUnits + " " + pricingMode + ")";
+            
+            // Show Loading
+            document.getElementById('loading-overlay').style.display = 'flex';
+
+            if(window.location.protocol !== "file:") {
+                fetch('/api/find-spot', { 
+                    method: 'POST', 
+                    headers: {'Content-Type': 'application/json'}, 
+                    body: JSON.stringify({ type: name }) 
+                })
+                .then(r => r.json())
+                .then(d => {
+                    document.getElementById('loading-overlay').style.display = 'none';
+                    if (d.status === "full") {
+                        alert("⚠️ PARKING FULL!\n\nSorry, there are no available slots for " + name + " right now.");
+                        return; 
+                    }
+                    document.getElementById('m-slot').innerText = d.slot;
+                    document.getElementById('m-dist').innerText = d.dist + " meters";
+                    document.getElementById('m-score').innerText = d.score;
+                    document.getElementById('result-modal').style.display = 'flex';
+                })
+                .catch(e => {
+                    console.error(e);
+                    document.getElementById('loading-overlay').style.display = 'none';
+                    alert("System Error: Could not connect to the Algorithmic Engine.");
+                });
+            } else {
+                // Simulation Mode
+                setTimeout(() => {
+                    document.getElementById('loading-overlay').style.display = 'none';
+                    document.getElementById('m-slot').innerText = "Slot A-101 (Sim)";
+                    document.getElementById('m-dist').innerText = "15 meters";
+                    document.getElementById('m-score').innerText = "98";
+                    document.getElementById('result-modal').style.display = 'flex';
+                }, 1000);
+            }
+        }
+
+        function proceedFromModal() {
+            document.getElementById('result-modal').style.display = 'none';
+            document.getElementById('page-selection').style.display = 'none';
+            document.getElementById('page-customer').style.display = 'flex';
+        }
+
+        // --- LIVE DASHBOARD LOGIC ---
+        function openDashboard() {
+            document.getElementById('dashboard-modal').style.display = 'flex';
+            if(window.location.protocol !== "file:") {
+                fetch('/api/parking-status').then(r=>r.json()).then(renderDashboard);
+                window.dashInterval = setInterval(() => {
+                    fetch('/api/parking-status').then(r=>r.json()).then(renderDashboard);
+                }, 2000);
+            } else {
+                renderDashboard([
+                    {id:"A-101", status:"free"}, {id:"A-102", status:"occupied"},
+                    {id:"B-201", status:"free"}, {id:"B-202", status:"free"},
+                    {id:"C-301", status:"occupied"}, {id:"Bus-B1", status:"free"}
+                ]);
+            }
+        }
+        
+        function renderDashboard(slots) {
+            const grid = document.getElementById('dash-grid');
+            grid.innerHTML = '';
+            slots.forEach(s => {
+                const div = document.createElement('div');
+                div.className = `slot-box ${s.status === 'free' ? 'slot-free' : 'slot-occupied'}`;
+                div.innerText = s.id + "\n" + s.status.toUpperCase();
+                grid.appendChild(div);
+            });
+        }
+
+        function closeDashboard() {
+            document.getElementById('dashboard-modal').style.display = 'none';
+            if(window.dashInterval) clearInterval(window.dashInterval);
+        }
+
+        // --- VALIDATION RESTORED ---
+        function goToReview() {
+            const f = document.getElementById('fname').value.trim();
+            const l = document.getElementById('lname').value.trim();
+            const e = document.getElementById('email').value.trim();
+            const p = document.getElementById('phone').value.trim();
+            const vr = document.getElementById('vehicle-reg').value.trim();
+            const city = document.getElementById('city').value.trim();
+            const cnic = document.getElementById('cnic').value.trim();
+            const addr = document.getElementById('address').value.trim();
+            
+            let isValid = true;
+            let errorMsg = "Please fix errors:\n";
+
+            // Strict Regex
+            const nameRegex = /^[A-Za-z\s]+$/; 
+            const numRegex = /^\d+$/; 
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+            if(!nameRegex.test(f) || !nameRegex.test(l)) { isValid=false; document.getElementById('fname').classList.add('error'); document.getElementById('lname').classList.add('error'); errorMsg+="Names must be letters.\n"; } 
+            else { document.getElementById('fname').classList.remove('error'); document.getElementById('lname').classList.remove('error'); }
+
+            if(!emailRegex.test(e)) { isValid=false; document.getElementById('email').classList.add('error'); errorMsg+="Invalid Email.\n"; }
+            else document.getElementById('email').classList.remove('error');
+
+            if(!numRegex.test(p) || p.length < 10) { isValid=false; document.getElementById('phone').classList.add('error'); errorMsg+="Phone must be digits (min 10).\n"; }
+            else document.getElementById('phone').classList.remove('error');
+
+            if(!nameRegex.test(city)) { isValid=false; document.getElementById('city').classList.add('error'); errorMsg+="City must be letters.\n"; }
+            else document.getElementById('city').classList.remove('error');
+
+            if(!numRegex.test(cnic)) { isValid=false; document.getElementById('cnic').classList.add('error'); errorMsg+="CNIC must be digits.\n"; }
+            else document.getElementById('cnic').classList.remove('error');
+
+            if(vr === "") { isValid=false; document.getElementById('vehicle-reg').classList.add('error'); } else document.getElementById('vehicle-reg').classList.remove('error');
+            if(addr === "") { isValid=false; document.getElementById('address').classList.add('error'); } else document.getElementById('address').classList.remove('error');
+
+            if(!isValid) { alert(errorMsg); return; }
+
+            // Populate Review
+            document.getElementById('r-name').innerText = f + " " + l;
+            document.getElementById('r-email').innerText = e;
+            document.getElementById('r-phone').innerText = p;
+            document.getElementById('r-cnic').innerText = cnic;
+            document.getElementById('r-veh').innerText = vr;
+            document.getElementById('r-city').innerText = city;
+            document.getElementById('r-addr').innerText = addr;
+            document.getElementById('r-pay').innerText = document.querySelector('input[name="payment"]:checked').value;
+
+            document.getElementById('page-customer').style.display = 'none';
+            document.getElementById('page-review').style.display = 'flex';
+        }
+
+        function finishBooking() {
+            document.getElementById('page-review').style.display = 'none';
+            document.getElementById('page-success').style.display = 'flex';
+        }
+    </script>
+</body>
+</html>
